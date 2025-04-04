@@ -13,6 +13,9 @@ import torch
 from collections.abc import Sequence
 from prettytable import PrettyTable
 from typing import TYPE_CHECKING
+import pandas as pd
+import os
+from datetime import datetime
 
 from isaaclab.utils import modifiers
 from isaaclab.utils.buffers import CircularBuffer
@@ -328,6 +331,77 @@ class ObservationManager(ManagerBase):
             else:
                 group_obs[term_name] = obs
 
+
+        
+
+        
+
+
+
+        MAX_ROWS = 10000
+        BASE_FILE_PATH = '/home/bfancellu/donnees'  # Base du nom du fichier
+        CHUNK_SIZE = 10000
+
+        def get_latest_file_path(base_path):
+            i = 1
+            while os.path.exists(f"{base_path}_{i}.feather"):
+                i += 1
+            latest_file = f"{base_path}_{i - 1}.feather" if i > 1 else f"{base_path}_1.feather"
+            return latest_file, i - 1 if i > 1 else 1
+
+        def safe_feather_append(data, base_path):
+            try:
+                expanded_data = {}
+                for key, values in data.items():
+                    for i, value in enumerate(values):
+                        expanded_data[f"{key}_{i}"] = [value]
+                
+                df_new = pd.DataFrame(expanded_data)
+                df_new['Run'] = f"Run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                
+                latest_file, file_index = get_latest_file_path(base_path)
+                
+                if os.path.exists(latest_file):
+                    df_existing = pd.read_feather(latest_file)
+                    if len(df_existing) >= MAX_ROWS:
+                        # Si le fichier actuel est plein, on crée un nouveau fichier
+                        file_index += 1
+                        latest_file = f"{base_path}_{file_index}.feather"
+                        df_existing = pd.DataFrame()
+                else:
+                    df_existing = pd.DataFrame()
+                
+                df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+                
+                if len(df_combined) > MAX_ROWS:
+                    df_combined = df_combined.head(MAX_ROWS)
+                
+                df_combined.to_feather(latest_file)
+                print(f"Données ajoutées dans {latest_file} (Total: {len(df_combined)}/{MAX_ROWS} lignes)")
+                return True
+            
+            except Exception as e:
+                print(f"ERREUR fatale: {str(e)}")
+                return False
+
+        data = {k: v.cpu().numpy().flatten().tolist() for k, v in group_obs.items()}
+
+        if len(next(iter(data.values()))) > CHUNK_SIZE:
+            print("Traitement par paquets de données...")
+            for i in range(0, len(next(iter(data.values()))), CHUNK_SIZE):
+                chunk = {k: v[i:i+CHUNK_SIZE] for k, v in data.items()}
+                if not safe_feather_append(chunk, BASE_FILE_PATH):
+                    break
+        else:
+            safe_feather_append(data, BASE_FILE_PATH)
+
+        print("Opération terminée")
+
+
+
+        
+
+        
         # concatenate all observations in the group together
         if self._group_obs_concatenate[group_name]:
             return torch.cat(list(group_obs.values()), dim=-1)
