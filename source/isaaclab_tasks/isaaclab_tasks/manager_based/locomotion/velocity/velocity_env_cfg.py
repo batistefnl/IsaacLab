@@ -23,7 +23,8 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab.sensors.imu import ImuCfg
-
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
+import numpy as np
 
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
