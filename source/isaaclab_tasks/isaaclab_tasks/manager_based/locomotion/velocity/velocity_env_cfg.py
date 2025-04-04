@@ -22,6 +22,8 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.sensors.imu import ImuCfg
+
 
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 
@@ -72,6 +74,8 @@ class MySceneCfg(InteractiveSceneCfg):
         mesh_prim_paths=["/World/ground"],
     )
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
+    imu = ImuCfg(prim_path="{ENV_REGEX_NS}/Robot/torso_link", debug_vis=True)
+
     # lights
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
